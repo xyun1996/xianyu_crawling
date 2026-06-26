@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useCrawlStatus } from './StatusProvider';
+import { useCrawlStatus, useRefreshStatus } from './StatusProvider';
 
 export default function ControlActions() {
   const status = useCrawlStatus();
+  const refresh = useRefreshStatus();
   const [intervalInput, setIntervalInput] = useState('');
   const [roundsInput, setRoundsInput] = useState('');
   const [message, setMessage] = useState<{ text: string; type: 'ok' | 'err' } | null>(null);
@@ -18,6 +19,7 @@ export default function ControlActions() {
     const res = await fetch('/api/crawl/start', { method: 'POST' });
     if (res.ok) {
       flash('已启动爬取', 'ok');
+      refresh();
     } else {
       const data = await res.json();
       flash(data.error || '启动失败', 'err');
@@ -26,8 +28,10 @@ export default function ControlActions() {
 
   const handlePause = async () => {
     const res = await fetch('/api/crawl/pause', { method: 'POST' });
-    if (res.ok) flash('已暂停爬取', 'ok');
-    else flash('暂停失败', 'err');
+    if (res.ok) {
+      flash('已暂停爬取', 'ok');
+      refresh();
+    } else flash('暂停失败', 'err');
   };
 
   const handleSetInterval = async () => {
@@ -41,7 +45,7 @@ export default function ControlActions() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ minutes }),
     });
-    if (res.ok) flash(`间隔已设为 ${minutes} 分钟`, 'ok');
+    if (res.ok) { flash(`间隔已设为 ${minutes} 分钟`, 'ok'); refresh(); }
     else {
       const data = await res.json();
       flash(data.error || '设置失败', 'err');
@@ -60,7 +64,7 @@ export default function ControlActions() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ max_rounds: maxRounds }),
     });
-    if (res.ok) flash(maxRounds ? `最多 ${maxRounds} 轮` : '已设为持续运行', 'ok');
+    if (res.ok) { flash(maxRounds ? `最多 ${maxRounds} 轮` : '已设为持续运行', 'ok'); refresh(); }
     else flash('设置失败', 'err');
     setRoundsInput('');
   };
@@ -71,6 +75,7 @@ export default function ControlActions() {
       flash('登录已在进行中', 'err');
     } else if (res.ok) {
       flash('登录流程已启动，请在浏览器窗口中操作', 'ok');
+      refresh();
     } else {
       flash('启动登录失败', 'err');
     }
